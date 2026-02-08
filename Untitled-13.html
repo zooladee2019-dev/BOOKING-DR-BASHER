@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>تطبيق الحجوزات الطبية</title>
+
+<!-- Google Identity -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+<style>
+:root{
+  --app-bg:#b905f5;
+  --btn:#f5e90a;
+  --card:#ffffff;
+}
+
+body{
+  font-family:Tahoma;
+  background:#eee;
+  display:flex;
+  justify-content:center;
+  padding:20px;
+}
+
+.app{
+  width:390px;
+  background:var(--app-bg);
+  padding:15px;
+  border-radius:18px;
+}
+
+.card{
+  background:var(--card);
+  padding:15px;
+  border-radius:14px;
+}
+
+h2{text-align:center}
+
+input,select{
+  width:100%;
+  padding:10px;
+  margin:6px 0;
+  border-radius:6px;
+  border:1px solid #ddd;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  margin-top:6px;
+  background:var(--btn);
+  border:none;
+  border-radius:6px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.hidden{display:none}
+
+.list{margin-top:10px;font-size:14px}
+.item{background:#f3f3f3;padding:8px;border-radius:6px;margin-bottom:6px}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+  <div class="card">
+
+    <h2>حجز موعد طبي</h2>
+
+    <!-- Google Login -->
+    <div id="loginBox">
+      <div id="g_id_onload"
+           data-client_id="PUT_YOUR_CLIENT_ID_HERE"
+           data-callback="handleLogin">
+      </div>
+
+      <div class="g_id_signin" data-type="standard"></div>
+    </div>
+
+    <!-- Booking Form -->
+    <div id="formBox" class="hidden">
+
+      <p id="userEmail"></p>
+
+      <input id="fname" placeholder="الاسم الأول">
+      <input id="lname" placeholder="الاسم الأخير">
+      <input id="phone" placeholder="رقم الهاتف">
+
+      <select id="service">
+        <option value="">اختر الخدمة</option>
+        <option>طبيب عمومي</option>
+        <option>طبيب أطفال</option>
+        <option>طبيب نساء وتوليد</option>
+        <option>طبيب باطنية</option>
+      </select>
+
+      <input type="date" id="date">
+
+      <select id="time">
+        <option value="">اختر الوقت</option>
+        <option>09:00</option>
+        <option>10:00</option>
+        <option>11:00</option>
+        <option>12:00</option>
+      </select>
+
+      <button onclick="book()">تأكيد الحجز</button>
+      <button onclick="loadBookings()">عرض الحجوزات</button>
+
+      <div class="list" id="list"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxYBO-2g3v5LL7U03xbFdhq6NRVHHsEjXefOUYrJmOnrsA4ofjmAXFB4ixrtFrPi352/exec";
+
+let userEmail = "";
+
+function handleLogin(response){
+  const data = JSON.parse(atob(response.credential.split('.')[1]));
+  userEmail = data.email;
+
+  document.getElementById("loginBox").classList.add("hidden");
+  document.getElementById("formBox").classList.remove("hidden");
+  document.getElementById("userEmail").innerText = "📧 " + userEmail;
+}
+
+function randomID(){
+  return Math.floor(100000 + Math.random() * 900000);
+}
+
+function book(){
+  if(!userEmail){
+    alert("يجب تسجيل الدخول أولاً");
+    return;
+  }
+
+  const booking = {
+    id: randomID(),
+    name: fname.value + " " + lname.value,
+    email: userEmail,
+    phone: phone.value,
+    service: service.value,
+    date: date.value,
+    time: time.value
+  };
+
+  fetch(SCRIPT_URL,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(booking)
+  })
+  .then(r => r.json())
+  .then(res => {
+    if(res.status === "success"){
+      alert("تم الحجز بنجاح ✅");
+      clearForm();
+    } else {
+      alert("فشل الحجز ❌");
+    }
+  })
+  .catch(()=> alert("خطأ في الاتصال"));
+}
+
+function loadBookings(){
+  fetch(SCRIPT_URL)
+    .then(r => r.json())
+    .then(data => {
+      list.innerHTML = "";
+      data.forEach(b=>{
+        list.innerHTML += `
+          <div class="item">
+            🔢 ${b.id}<br>
+            👤 ${b.name}<br>
+            📧 ${b.email}<br>
+            📞 ${b.phone}<br>
+            🩺 ${b.service}<br>
+            📅 ${b.date} - ${b.time}
+          </div>`;
+      });
+    });
+}
+
+function clearForm(){
+  document.querySelectorAll("input,select").forEach(e => e.value = "");
+}
+</script>
+
+</body>
+</html>
